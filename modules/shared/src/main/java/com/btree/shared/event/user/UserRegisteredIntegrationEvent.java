@@ -13,7 +13,7 @@ public class UserRegisteredIntegrationEvent extends IntegrationEvent {
     private final String email;
 
     public UserRegisteredIntegrationEvent(final UUID userId, final String email) {
-        super(SOURCE);
+        super(SOURCE, "User", userId.toString());
         this.userId = userId;
         this.email = email;
     }

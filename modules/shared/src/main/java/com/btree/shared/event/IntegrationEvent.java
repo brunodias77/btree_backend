@@ -6,16 +6,6 @@ import com.btree.shared.util.UuidV7;
 import java.time.Instant;
 import java.util.Objects;
 
-/**
- * Classe base para eventos de integração publicados para outros serviços/contextos.
- *
- * <p>Diferente de {@link DomainEvent} (interno ao agregado), eventos de integração
- * cruzam fronteiras de contexto e incluem o campo {@code source} para identificar
- * o serviço de origem.
- *
- * <p>O gerador de IDs é substituível via {@link #setIdGenerator} — útil em testes
- * para produzir IDs previsíveis sem depender de {@link UuidV7} diretamente.
- */
 public abstract class IntegrationEvent {
 
     private static UuidGenerator idGenerator = () -> UuidV7.generate().toString();
@@ -23,24 +13,34 @@ public abstract class IntegrationEvent {
     private final String eventId;
     private final Instant occurredOn;
     private final String source;
+    private final String aggregateType;
+    private final String aggregateId;
 
     protected IntegrationEvent(final String source) {
-        this.eventId = idGenerator.generate();
-        this.occurredOn = Instant.now();
-        this.source = Objects.requireNonNull(source, "'source' não pode ser nulo");
+        this(source, source, UuidV7.generate().toString());
     }
 
-    /** Substitui o gerador de IDs padrão — use em testes para IDs determinísticos. */
+    protected IntegrationEvent(
+            final String source,
+            final String aggregateType,
+            final String aggregateId
+    ) {
+        this.eventId = idGenerator.generate();
+        this.occurredOn = Instant.now();
+        this.source = Objects.requireNonNull(source, "'source' cannot be null");
+        this.aggregateType = Objects.requireNonNull(aggregateType, "'aggregateType' cannot be null");
+        this.aggregateId = Objects.requireNonNull(aggregateId, "'aggregateId' cannot be null");
+    }
+
     public static void setIdGenerator(final UuidGenerator generator) {
         idGenerator = Objects.requireNonNull(generator);
     }
 
     public String getEventId() { return eventId; }
     public Instant getOccurredOn() { return occurredOn; }
-
-    /** Nome do serviço/módulo que originou o evento (ex: {@code "catalog"}). */
     public String getSource() { return source; }
+    public String getAggregateType() { return aggregateType; }
+    public String getAggregateId() { return aggregateId; }
 
-    /** Identificador único do tipo de evento (ex: {@code "ProductPublished"}). */
     public abstract String getEventType();
 }
