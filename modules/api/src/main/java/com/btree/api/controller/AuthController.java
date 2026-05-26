@@ -4,6 +4,7 @@ import com.btree.api.dto.ApiResponse;
 import com.btree.api.dto.request.user.RegisterUserRequest;
 import com.btree.api.dto.request.user.VerifyEmailRequest;
 import com.btree.api.dto.response.user.RegisterUserResponse;
+import com.btree.api.mapper.AuthHttpStatusMapper;
 import com.btree.user.application.usecase.auth.register.RegisterUserUseCase;
 import com.btree.user.application.usecase.auth.verify_email.VerifyEmailUseCase;
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,10 +42,12 @@ public class AuthController {
         final var result = registerUserUseCase.execute(request.toInput());
 
         if (result.isLeft()) {
-            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(
+            final var status = AuthHttpStatusMapper.register(result.getLeft());
+
+            return ResponseEntity.status(status).body(
                     ApiResponse.error(
-                            HttpStatus.UNPROCESSABLE_CONTENT,
-                            "Unprocessable Content",
+                            status,
+                            status.getReasonPhrase(),
                             result.getLeft(),
                             servletRequest.getRequestURI()));
         }
@@ -65,10 +68,12 @@ public class AuthController {
         final var result = verifyEmailUseCase.execute(request.toInput());
 
         if (result.isLeft()) {
-            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(
+            final var status = AuthHttpStatusMapper.verifyEmail(result.getLeft());
+
+            return ResponseEntity.status(status).body(
                     ApiResponse.error(
-                            HttpStatus.UNPROCESSABLE_CONTENT,
-                            "Unprocessable Content",
+                            status,
+                            status.getReasonPhrase(),
                             result.getLeft(),
                             servletRequest.getRequestURI()));
         }

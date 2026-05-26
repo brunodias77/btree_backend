@@ -10,7 +10,6 @@ import io.vavr.control.Either;
 
 import static io.vavr.API.Left;
 import static io.vavr.API.Right;
-import static io.vavr.API.Try;
 
 public class CreateCartForUserUseCase implements UnitUseCase<CreateCartForUserInput> {
 
@@ -45,11 +44,13 @@ public class CreateCartForUserUseCase implements UnitUseCase<CreateCartForUserIn
             return Left(notification);
         }
 
-        return Try(() -> transactionManager.execute(() -> {
+        transactionManager.execute(() -> {
             if (!cartGateway.existsActiveByUserId(input.userId())) {
                 cartGateway.create(cart);
             }
             return (Void) null;
-        })).toEither().mapLeft(Notification::create);
+        });
+
+        return Right(null);
     }
 }

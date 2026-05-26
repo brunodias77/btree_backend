@@ -104,11 +104,13 @@ public class VerifyEmailUseCase implements UnitUseCase<VerifyEmailInput> {
 
             return Either.right(null);
         } catch (final DomainException ex) {
+            if (ex.getClass() != DomainException.class) {
+                throw ex;
+            }
+
             final var domainNotification = Notification.create();
             ex.getErrors().forEach(domainNotification::append);
             return Either.left(domainNotification);
-        } catch (final Exception ex) {
-            return Either.left(Notification.create(ex));
         }
     }
 
