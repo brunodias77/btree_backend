@@ -13,9 +13,13 @@
         <module>modules/shared</module>
         <module>modules/shared-infrastructure</module>
         <module>modules/user/user-domain</module>
-        <module>modules/user/user-application</module>
         <module>modules/user/user-infra</module>
         <module>modules/api</module>
+        <module>modules/catalog/catalog-domain</module>
+        <module>modules/catalog/catalog-application</module>
+        <module>modules/cart/cart-domain</module>
+        <module>modules/cart/cart-application</module>
+        <module>modules/user/user-application</module>
     </modules>
 
     <properties>

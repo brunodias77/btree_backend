@@ -1,0 +1,132 @@
+package com.btree.shared_infrastructure.event;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.io.Serializable;
+import java.time.Instant;
+import java.util.Objects;
+import java.util.UUID;
+
+/**
+ * Entidade JPA que representa um evento de domínio persistido no Outbox.
+ *
+ * <p>Cada registro em {@code shared.domain_events} guarda os metadados necessários
+ * para processamento assíncrono: módulo de origem, aggregate, tipo do evento,
+ * payload serializado em JSON e estado de processamento.
+ *
+ * <p>A chave primária composta por {@code id + created_at} permite manter o ID
+ * lógico do evento e preservar a ordenação cronológica usada pelo polling.
+ */
+@Entity
+@Table(name = "domain_events", schema = "shared")
+@IdClass(DomainEventEntity.DomainEventEntityId.class)
+@Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class DomainEventEntity {
+
+    @Id
+    @Column(name = "id", nullable = false, updatable = false)
+    private UUID id;
+
+    @Id
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+
+    @Column(name = "module", nullable = false, length = 50)
+    private String module;
+
+
+    @Column(name = "aggregate_type", nullable = false, length = 100)
+    private String aggregateType;
+
+
+    @Column(name = "aggregate_id", nullable = false, updatable = false)
+    private UUID aggregateId;
+
+    @Column(name = "event_type", nullable = false)
+    private String eventType;
+
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
+    private String payload;
+
+
+    @Column(name = "processed_at")
+    private Instant processedAt;
+
+
+    @Column(name = "error_message")
+    private String errorMessage;
+
+
+    @Builder.Default
+    @Column(name = "retry_count", nullable = false)
+    private int retryCount = 0;
+
+    // ── Behaviors ────────────────────────────────────────────
+
+
+    public void markAsProcessed() {
+        this.processedAt = Instant.now();
+        this.errorMessage = null;
+    }
+
+
+    public void markAsFailed(final String error) {
+        this.errorMessage = error;
+        this.retryCount++;
+    }
+
+
+    public boolean isProcessed() {
+        return processedAt != null;
+    }
+
+    // ── Composite PK ─────────────────────────────────────────
+
+    /**
+     * Identificador composto usado pelo JPA para localizar eventos no Outbox.
+     *
+     * <p>O par {@code id + createdAt} precisa implementar {@code equals/hashCode}
+     * porque é usado internamente pelo Hibernate como identidade da entidade.
+     */
+    public static class DomainEventEntityId implements Serializable {
+
+        private UUID id;
+
+        private Instant createdAt;
+
+        public DomainEventEntityId() {}
+
+        public DomainEventEntityId(final UUID id, final Instant createdAt) {
+            this.id = id;
+            this.createdAt = createdAt;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) return true;
+            if (!(o instanceof DomainEventEntityId that)) return false;
+            return Objects.equals(id, that.id) && Objects.equals(createdAt, that.createdAt);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(id, createdAt);
+        }
+    }
+}

@@ -1,3 +1,30 @@
 spring:
   application:
     name: api
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/btree}
+    username: ${SPRING_DATASOURCE_USERNAME:btree}
+    password: ${SPRING_DATASOURCE_PASSWORD:btree}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    open-in-view: false
+
+outbox:
+  polling:
+    interval-ms: 5000
+
+security:
+  jwt:
+    issuer: ${JWT_ISSUER:btree-api}
+    secret: ${JWT_SECRET:btree-local-development-secret-change-me-32-bytes-minimum}
+    access-token-ttl-minutes: ${JWT_ACCESS_TOKEN_TTL_MINUTES:15}
+    refresh-token-ttl-days: ${JWT_REFRESH_TOKEN_TTL_DAYS:30}
+
+logging:
+  level:
+    root: INFO
+    com.btree: DEBUG
+    org.springframework.security: INFO
+    org.flywaydb: INFO
+  pattern:
+    console: "%clr(%d{yyyy-MM-dd HH:mm:ss}){faint} %clr([%thread]){magenta} %clr(%-5level){highlight} %clr(%logger{36}){cyan} - %msg%n"
