@@ -30,7 +30,7 @@ SELECT encode(
                                overlay(
                                        uuid_send(gen_random_uuid())
                                            placing substring(int8send(floor(extract(epoch FROM clock_timestamp()) * 1000)::bigint) from 3)
-          from 1 for 6
+         from 1 for 6
                                ),
                                6, (get_byte(uuid_send(gen_random_uuid()), 6) & 15) | 112  -- version 7
                        ),
@@ -1053,7 +1053,7 @@ CREATE INDEX idx_webhooks_pending    ON payments.webhooks(received_at ASC) WHERE
 CREATE INDEX idx_webhooks_payment_id ON payments.webhooks(payment_id) WHERE payment_id IS NOT NULL;
 -- [FIX] Previne reprocessamento de evento duplicado por gateway
 CREATE UNIQUE INDEX uq_webhooks_gateway_event
-    ON payments.webhooks(gateway_name, gateway_event_id)
+    ON payments.webhooks(gateway_name, gateway_event_id, received_at)
     WHERE gateway_event_id IS NOT NULL;
 
 -- ============================================================
@@ -1281,26 +1281,6 @@ CREATE INDEX idx_order_refunds_payment_id ON orders.refunds(payment_id)
 ALTER TABLE catalog.product_reviews
     ADD CONSTRAINT fk_reviews_order
         FOREIGN KEY (order_id) REFERENCES orders.orders(id) ON DELETE SET NULL;
-
--- ============================================================
--- NOTA SOBRE MANUTENÇÃO DE PARTIÇÕES
--- ============================================================
--- As partições acima cobrem 2025 e 2026 (trimestral).
--- Recomenda-se fortemente o uso de pg_partman para criação
--- automática de partições futuras e detach/drop de antigas.
--- Exemplo de configuração:
---
---   SELECT partman.create_parent(
---       p_parent_table  => 'shared.domain_events',
---       p_control       => 'created_at',
---       p_type          => 'range',
---       p_interval      => '3 months',
---       p_premake       => 4
---   );
---
--- O mesmo vale para: users.login_history, catalog.stock_movements,
--- shared.audit_logs e payments.webhooks.
--- ============================================================
 
 -- ============================================================
 -- IMPLICIT CASTS: character varying → enum
