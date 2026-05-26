@@ -1,13 +1,7 @@
 package com.btree.shared_infrastructure;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Configuration;
 
-@SpringBootApplication
+@Configuration
 public class SharedInfrastructureApplication {
-
-	public static void main(String[] args) {
-		SpringApplication.run(SharedInfrastructureApplication.class, args);
-	}
-
 }
