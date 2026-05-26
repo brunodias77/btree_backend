@@ -2,8 +2,10 @@ package com.btree.api.controller;
 
 import com.btree.api.dto.ApiResponse;
 import com.btree.api.dto.request.user.RegisterUserRequest;
+import com.btree.api.dto.request.user.VerifyEmailRequest;
 import com.btree.api.dto.response.user.RegisterUserResponse;
 import com.btree.user.application.usecase.auth.register.RegisterUserUseCase;
+import com.btree.user.application.usecase.auth.verify_email.VerifyEmailUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,9 +23,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final RegisterUserUseCase registerUserUseCase;
+    private final VerifyEmailUseCase verifyEmailUseCase;
 
-    public AuthController(final RegisterUserUseCase registerUserUseCase) {
+    public AuthController(
+            final RegisterUserUseCase registerUserUseCase,
+            final VerifyEmailUseCase verifyEmailUseCase
+    ) {
         this.registerUserUseCase = registerUserUseCase;
+        this.verifyEmailUseCase = verifyEmailUseCase;
     }
 
     @PostMapping("/register")
@@ -47,6 +54,30 @@ public class AuthController {
                         HttpStatus.CREATED,
                         "Usuario registrado com sucesso",
                         RegisterUserResponse.from(result.get()),
+                        servletRequest.getRequestURI()));
+    }
+
+    @PostMapping("/verify-email")
+    @Operation(summary = "Verificar e-mail", description = "Valida o token enviado por e-mail e confirma o e-mail do usuario.")
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(
+            @Valid @RequestBody final VerifyEmailRequest request,
+            final HttpServletRequest servletRequest) {
+        final var result = verifyEmailUseCase.execute(request.toInput());
+
+        if (result.isLeft()) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(
+                    ApiResponse.error(
+                            HttpStatus.UNPROCESSABLE_CONTENT,
+                            "Unprocessable Content",
+                            result.getLeft(),
+                            servletRequest.getRequestURI()));
+        }
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        HttpStatus.OK,
+                        "E-mail verificado com sucesso",
+                        null,
                         servletRequest.getRequestURI()));
     }
 
