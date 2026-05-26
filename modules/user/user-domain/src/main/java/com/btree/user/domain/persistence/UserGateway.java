@@ -8,6 +8,7 @@ public interface UserGateway {
     User save(User user);
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
+    void createRoleIfNotExists(String roleName, String description);
     void assignRole(UUID userId, String roleName);
     java.util.Optional<User> findByEmail(String email);
     java.util.Optional<User> findById(UUID id);

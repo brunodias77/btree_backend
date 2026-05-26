@@ -1,6 +1,7 @@
 package com.btree.user.infra.model;
 
 
+import com.btree.user.domain.entity.Role;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -25,6 +26,15 @@ public class RoleJpaEntity {
     private Instant createdAt;
 
     public RoleJpaEntity() {
+    }
+
+    public static RoleJpaEntity from(final Role role) {
+        final var entity = new RoleJpaEntity();
+        entity.setId(role.getId());
+        entity.setName(role.getName());
+        entity.setDescription(role.getDescription());
+        entity.setCreatedAt(role.getCreatedAt());
+        return entity;
     }
 
     public UUID getId() {

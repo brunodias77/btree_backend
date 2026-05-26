@@ -3,10 +3,13 @@ package com.btree.user.infra.persistence;
 
 import com.btree.shared.exception.NotFoundException;
 import com.btree.user.domain.aggregate_root.User;
+import com.btree.user.domain.entity.Role;
 import com.btree.user.domain.persistence.UserGateway;
+import com.btree.user.infra.model.RoleJpaEntity;
 import com.btree.user.infra.model.UserJpaEntity;
 import com.btree.user.infra.repository.RoleJpaRepository;
 import com.btree.user.infra.repository.UserJpaRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,6 +62,19 @@ public class UserPostgresGateway implements UserGateway {
         return userJpaRepository.existsByEmailIgnoreCase(email);
     }
 
+    @Override
+    public void createRoleIfNotExists(final String roleName, final String description) {
+        if (roleJpaRepository.existsByNameIgnoreCase(roleName)) {
+            return;
+        }
+
+        try {
+            roleJpaRepository.save(RoleJpaEntity.from(Role.create(roleName, description)));
+        } catch (final DataIntegrityViolationException ignored) {
+            // Another transaction may have created the role between the check and the insert.
+        }
+    }
+
     // ── Buscas por Entidade (Queries) ─────────────────────────────────────────
 
     @Override
@@ -102,7 +118,7 @@ public class UserPostgresGateway implements UserGateway {
         final var userEntity = userJpaRepository.findById(userId)
                 .orElseThrow(() -> NotFoundException.with(User.class, userId));
 
-        final var roleEntity = roleJpaRepository.findByName(roleName)
+        final var roleEntity = roleJpaRepository.findByNameIgnoreCase(roleName)
                 .orElseThrow(() -> NotFoundException.with("Role '%s' não encontrada".formatted(roleName)));
 
         userEntity.getRoles().add(roleEntity);

@@ -13,6 +13,13 @@ outbox:
   polling:
     interval-ms: 5000
 
+security:
+  jwt:
+    issuer: ${JWT_ISSUER:btree-api}
+    secret: ${JWT_SECRET:btree-local-development-secret-change-me-32-bytes-minimum}
+    access-token-ttl-minutes: ${JWT_ACCESS_TOKEN_TTL_MINUTES:15}
+    refresh-token-ttl-days: ${JWT_REFRESH_TOKEN_TTL_DAYS:30}
+
 logging:
   level:
     root: INFO
