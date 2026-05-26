@@ -2,6 +2,14 @@
 <project version="4">
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/modules/api/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/modules/cart/cart-application/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/modules/cart/cart-application/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/modules/cart/cart-domain/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/modules/cart/cart-domain/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/modules/catalog/catalog-application/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/modules/catalog/catalog-application/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/modules/catalog/catalog-domain/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/modules/catalog/catalog-domain/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/modules/shared-infrastructure/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/modules/shared/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/modules/shared/src/main/resources" charset="UTF-8" />
