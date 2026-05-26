@@ -17,7 +17,16 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
-
+/**
+ * Entidade JPA que representa um evento de domínio persistido no Outbox.
+ *
+ * <p>Cada registro em {@code shared.domain_events} guarda os metadados necessários
+ * para processamento assíncrono: módulo de origem, aggregate, tipo do evento,
+ * payload serializado em JSON e estado de processamento.
+ *
+ * <p>A chave primária composta por {@code id + created_at} permite manter o ID
+ * lógico do evento e preservar a ordenação cronológica usada pelo polling.
+ */
 @Entity
 @Table(name = "domain_events", schema = "shared")
 @IdClass(DomainEventEntity.DomainEventEntityId.class)
@@ -89,7 +98,12 @@ public class DomainEventEntity {
 
     // ── Composite PK ─────────────────────────────────────────
 
-
+    /**
+     * Identificador composto usado pelo JPA para localizar eventos no Outbox.
+     *
+     * <p>O par {@code id + createdAt} precisa implementar {@code equals/hashCode}
+     * porque é usado internamente pelo Hibernate como identidade da entidade.
+     */
     public static class DomainEventEntityId implements Serializable {
 
         private UUID id;

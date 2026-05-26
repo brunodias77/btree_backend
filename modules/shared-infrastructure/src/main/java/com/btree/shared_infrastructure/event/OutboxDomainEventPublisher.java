@@ -2,16 +2,25 @@ package com.btree.shared_infrastructure.event;
 
 import com.btree.shared.event.DomainEvent;
 import com.btree.shared.event.DomainEventPublisher;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.UUID;
 
-
+/**
+ * Publicador de eventos de domínio baseado no Outbox Pattern.
+ *
+ * <p>Em vez de entregar eventos diretamente a consumidores externos, converte
+ * {@link DomainEvent} em {@link DomainEventEntity} e grava na tabela
+ * {@code shared.domain_events}. O job de polling processa esses registros depois.
+ *
+ * <p>Os métodos exigem uma transação já ativa para garantir que a gravação do
+ * evento seja confirmada junto com a alteração de estado do aggregate.
+ */
 @Component
 public class OutboxDomainEventPublisher implements DomainEventPublisher {
 
@@ -61,7 +70,7 @@ public class OutboxDomainEventPublisher implements DomainEventPublisher {
     private String serializePayload(final DomainEvent event) {
         try {
             return objectMapper.writeValueAsString(event);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Failed to serialize domain event payload: " + event.getEventType(), e);
         }
     }

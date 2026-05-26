@@ -14,6 +14,16 @@ import org.springframework.stereotype.Component;
 
 import static io.vavr.API.Try;
 
+/**
+ * Job responsável por avançar eventos pendentes do Outbox para o estado processado.
+ *
+ * <p>O fluxo atual ainda não despacha para handlers externos; ele aplica a
+ * idempotência via {@link ProcessedEventGateway}, marca eventos como processados
+ * em {@link OutboxEventGateway} e registra falhas para retry posterior.
+ *
+ * <p>Também expõe um scheduler Spring que executa o job periodicamente usando o
+ * intervalo configurado em {@code outbox.polling.interval-ms}.
+ */
 @Component
 public class ProcessDomainEventsJob implements Job<ProcessDomainEvents> {
     private static final Logger log = LoggerFactory.getLogger(ProcessDomainEventsJob.class);

@@ -8,6 +8,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.function.Supplier;
 
+/**
+ * Adaptador entre o contrato transacional do domínio compartilhado e o Spring.
+ *
+ * <p>Centraliza o uso de {@link TransactionTemplate} para que os módulos de
+ * aplicação não dependam diretamente de APIs do Spring ao executar blocos
+ * transacionais ou callbacks após commit.
+ */
 @Component
 public class SpringTransactionManager implements TransactionManager {
 
