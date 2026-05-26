@@ -15,6 +15,9 @@ import io.vavr.control.Either;
 
 public class RegisterUserUseCase implements UseCase<RegisterUserInput, RegisterUserOutput> {
 
+    private static final String DEFAULT_ROLE = "customer";
+    private static final String DEFAULT_ROLE_DESCRIPTION = "Default customer role";
+
     private final UserGateway userGateway;
     private final PasswordHasher passwordHasher;
     private final DomainEventPublisher domainEventPublisher;
@@ -77,7 +80,10 @@ public class RegisterUserUseCase implements UseCase<RegisterUserInput, RegisterU
         final var email = normalizeEmail(input.email());
         final var passwordHash = passwordHasher.hash(input.password());
         final var user = User.create(username, email, passwordHash, Notification.create());
+
+        userGateway.createRoleIfNotExists(DEFAULT_ROLE, DEFAULT_ROLE_DESCRIPTION);
         final var savedUser = userGateway.save(user);
+        userGateway.assignRole(savedUser.getId(), DEFAULT_ROLE);
 
         domainEventPublisher.publishAll(user.getDomainEvents());
         user.clearDomainEvents();
