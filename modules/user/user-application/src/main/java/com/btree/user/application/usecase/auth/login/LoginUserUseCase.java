@@ -6,7 +6,6 @@ import com.btree.shared.contract.TokenProvider;
 import com.btree.shared.contract.TransactionManager;
 import com.btree.shared.enums.TokenType;
 import com.btree.shared.event.DomainEventPublisher;
-import com.btree.shared.exception.DomainException;
 import com.btree.shared.usecase.UseCase;
 import com.btree.shared.usecase.UseCaseResponse;
 import com.btree.shared.validation.Error;
@@ -153,30 +152,23 @@ public class LoginUserUseCase implements UseCase<LoginUserInput, LoginUserOutput
         );
         final var history = LoginHistory.recordSuccess(user.getId(), LOCAL_LOGIN_PROVIDER, deviceInfo);
 
-        try {
-            return UseCaseResponse.success(this.transactionManager.execute(() -> {
-                this.userGateway.update(user); // persiste o reset do accessFailedCount
-                this.sessionGateway.create(session);
-                this.loginHistoryGateway.create(history);
-                publishAndClearDomainEvents(user);
-                return new LoginUserOutput(
-                        accessToken,
-                        rawRefreshToken,
-                        accessTokenExpiresAt,
-                        user.getId().toString(),
-                        user.getUsername(),
-                        user.getEmail(),
-                        List.copyOf(user.getRoles()),
-                        false,
-                        null
-                );
-            }));
-        } catch (final DomainException ex) {
-            if (ex.getClass() != DomainException.class) throw ex;
-            return UseCaseResponse.failure(Notification.create().appendAll(ex.getErrors()));
-        } catch (final Throwable t) {
-            return UseCaseResponse.failure(Notification.create(t));
-        }
+        return UseCaseResponse.execute(() -> this.transactionManager.execute(() -> {
+            this.userGateway.update(user); // persiste o reset do accessFailedCount
+            this.sessionGateway.create(session);
+            this.loginHistoryGateway.create(history);
+            publishAndClearDomainEvents(user);
+            return new LoginUserOutput(
+                    accessToken,
+                    rawRefreshToken,
+                    accessTokenExpiresAt,
+                    user.getId().toString(),
+                    user.getUsername(),
+                    user.getEmail(),
+                    List.copyOf(user.getRoles()),
+                    false,
+                    null
+            );
+        }));
     }
 
     /** Persiste o usuário sem lançar exceção (usado para desbloqueio automático). */
@@ -251,29 +243,22 @@ public class LoginUserUseCase implements UseCase<LoginUserInput, LoginUserOutput
         final var username = user.getUsername();
         final var email = user.getEmail();
 
-        try {
-            return UseCaseResponse.success(this.transactionManager.execute(() -> {
-                this.userGateway.update(user);  // persiste reset do accessFailedCount
-                this.userTokenGateway.create(twoFactorToken);
-                publishAndClearDomainEvents(user);
-                return new LoginUserOutput(
-                        null,
-                        null,
-                        null,
-                        user.getId().toString(),
-                        username,
-                        email,
-                        List.copyOf(user.getRoles()),
-                        true,
-                        transactionId
-                );
-            }));
-        } catch (final DomainException ex) {
-            if (ex.getClass() != DomainException.class) throw ex;
-            return UseCaseResponse.failure(Notification.create().appendAll(ex.getErrors()));
-        } catch (final Throwable t) {
-            return UseCaseResponse.failure(Notification.create(t));
-        }
+        return UseCaseResponse.execute(() -> this.transactionManager.execute(() -> {
+            this.userGateway.update(user);  // persiste reset do accessFailedCount
+            this.userTokenGateway.create(twoFactorToken);
+            publishAndClearDomainEvents(user);
+            return new LoginUserOutput(
+                    null,
+                    null,
+                    null,
+                    user.getId().toString(),
+                    username,
+                    email,
+                    List.copyOf(user.getRoles()),
+                    true,
+                    transactionId
+            );
+        }));
     }
 
     private void publishAndClearDomainEvents(final User user) {

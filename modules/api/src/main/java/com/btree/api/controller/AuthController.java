@@ -1,11 +1,14 @@
 package com.btree.api.controller;
 
 import com.btree.api.dto.ApiResponse;
+import com.btree.api.dto.request.user.LoginUserRequest;
 import com.btree.api.dto.request.user.RegisterUserRequest;
 import com.btree.shared.validation.Notification;
 import com.btree.api.dto.request.user.VerifyEmailRequest;
+import com.btree.api.dto.response.user.LoginUserResponse;
 import com.btree.api.dto.response.user.RegisterUserResponse;
 import com.btree.api.mapper.AuthHttpStatusMapper;
+import com.btree.user.application.usecase.auth.login.LoginUserUseCase;
 import com.btree.user.application.usecase.auth.register.RegisterUserUseCase;
 import com.btree.user.application.usecase.auth.verify_email.VerifyEmailUseCase;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,13 +28,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final RegisterUserUseCase registerUserUseCase;
+    private final LoginUserUseCase loginUserUseCase;
     private final VerifyEmailUseCase verifyEmailUseCase;
 
     public AuthController(
             final RegisterUserUseCase registerUserUseCase,
+            final LoginUserUseCase loginUserUseCase,
             final VerifyEmailUseCase verifyEmailUseCase
     ) {
         this.registerUserUseCase = registerUserUseCase;
+        this.loginUserUseCase = loginUserUseCase;
         this.verifyEmailUseCase = verifyEmailUseCase;
     }
 
@@ -59,6 +65,39 @@ public class AuthController {
                         HttpStatus.CREATED,
                         "Usuario registrado com sucesso",
                         RegisterUserResponse.from(result.getOutput()),
+                        servletRequest.getRequestURI()));
+    }
+
+    @PostMapping("/login")
+    @Operation(summary = "Realizar login", description = "Autentica o usuario e retorna tokens de acesso ou uma transacao de 2FA.")
+    public ResponseEntity<ApiResponse<LoginUserResponse>> login(
+            @Valid @RequestBody final LoginUserRequest request,
+            final HttpServletRequest servletRequest) {
+        final var result = loginUserUseCase.execute(
+                request.toInput(servletRequest.getRemoteAddr(), servletRequest.getHeader("User-Agent")));
+
+        if (result.isFailure()) {
+            final var notification = Notification.create().appendAll(result.getErrors());
+            final var status = AuthHttpStatusMapper.login(notification);
+
+            return ResponseEntity.status(status).body(
+                    ApiResponse.error(
+                            status,
+                            status.getReasonPhrase(),
+                            notification,
+                            servletRequest.getRequestURI()));
+        }
+
+        final var output = result.getOutput();
+        final var message = output.requiresTwoFactor()
+                ? "Autenticacao de dois fatores requerida"
+                : "Login realizado com sucesso";
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        HttpStatus.OK,
+                        message,
+                        LoginUserResponse.from(output),
                         servletRequest.getRequestURI()));
     }
 

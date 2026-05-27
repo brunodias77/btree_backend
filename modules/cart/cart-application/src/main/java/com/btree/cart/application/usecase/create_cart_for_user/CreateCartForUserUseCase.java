@@ -3,7 +3,6 @@ package com.btree.cart.application.usecase.create_cart_for_user;
 import com.btree.cart.domain.aggregate_root.Cart;
 import com.btree.cart.domain.persistence.CartGateway;
 import com.btree.shared.contract.TransactionManager;
-import com.btree.shared.exception.DomainException;
 import com.btree.shared.usecase.UnitUseCase;
 import com.btree.shared.usecase.UseCaseResponse;
 import com.btree.shared.validation.Error;
@@ -42,19 +41,13 @@ public class CreateCartForUserUseCase implements UnitUseCase<CreateCartForUserIn
             return UseCaseResponse.failure(notification);
         }
 
-        try {
+        return UseCaseResponse.executeVoid(() ->
             transactionManager.execute(() -> {
                 if (!cartGateway.existsActiveByUserId(input.userId())) {
                     cartGateway.create(cart);
                 }
                 return (Void) null;
-            });
-            return UseCaseResponse.success(null);
-        } catch (final DomainException ex) {
-            if (ex.getClass() != DomainException.class) throw ex;
-            return UseCaseResponse.failure(Notification.create().appendAll(ex.getErrors()));
-        } catch (final Throwable t) {
-            return UseCaseResponse.failure(Notification.create(t));
-        }
+            })
+        );
     }
 }

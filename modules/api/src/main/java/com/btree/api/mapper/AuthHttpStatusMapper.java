@@ -41,6 +41,19 @@ public final class AuthHttpStatusMapper {
         return HttpStatus.UNPROCESSABLE_ENTITY;
     }
 
+    public static HttpStatus login(final Notification notification) {
+        if (hasError(notification, UserError.INVALID_CREDENTIALS)) {
+            return HttpStatus.UNAUTHORIZED;
+        }
+
+        if (hasError(notification, UserError.ACCOUNT_DISABLED)
+                || hasError(notification, UserError.ACCOUNT_LOCKED)) {
+            return HttpStatus.FORBIDDEN;
+        }
+
+        return HttpStatus.UNPROCESSABLE_ENTITY;
+    }
+
     private static boolean hasError(final Notification notification, final Error error) {
         return notification != null && notification.getErrors().contains(error);
     }

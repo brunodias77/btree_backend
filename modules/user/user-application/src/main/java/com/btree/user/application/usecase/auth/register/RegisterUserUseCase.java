@@ -8,7 +8,6 @@ import com.btree.shared.event.DomainEventPublisher;
 import com.btree.shared.event.IntegrationEventPublisher;
 import com.btree.shared.event.user.UserRegisteredIntegrationEvent;
 import com.btree.shared.enums.TokenType;
-import com.btree.shared.exception.DomainException;
 import com.btree.shared.usecase.UseCase;
 import com.btree.shared.usecase.UseCaseResponse;
 import com.btree.shared.validation.Error;
@@ -73,14 +72,7 @@ public class RegisterUserUseCase implements UseCase<RegisterUserInput, RegisterU
             return UseCaseResponse.failure(notification);
         }
 
-        try {
-            return UseCaseResponse.success(this.transactionManager.execute(() -> register(input)));
-        } catch (final DomainException ex) {
-            if (ex.getClass() != DomainException.class) throw ex;
-            return UseCaseResponse.failure(Notification.create().appendAll(ex.getErrors()));
-        } catch (final Throwable t) {
-            return UseCaseResponse.failure(Notification.create(t));
-        }
+        return UseCaseResponse.execute(() -> this.transactionManager.execute(() -> register(input)));
     }
 
     private void checkUniqueness(final RegisterUserInput input, final Notification notification) {

@@ -32,7 +32,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -288,7 +287,7 @@ class LoginUserUseCaseTest {
     }
 
     @Test
-    void DEVE_PROPAGAR_SUBCLASSE_DE_DOMAIN_EXCEPTION() {
+    void DEVE_CONVERTER_SUBCLASSE_DE_DOMAIN_EXCEPTION_EM_NOTIFICATION() {
         final class TestDomainException extends DomainException {
             TestDomainException() {
                 super(List.of(new Error("erro especifico")));
@@ -306,11 +305,14 @@ class LoginUserUseCaseTest {
         when(tokenHasher.hash("refresh-token")).thenReturn("refresh-hash");
         when(sessionGateway.create(any(Session.class))).thenThrow(new TestDomainException());
 
-        assertThrows(TestDomainException.class, () -> useCase.execute(new LoginUserInput(
+        final var result = useCase.execute(new LoginUserInput(
                 "cliente@example.com",
                 "Senha@123",
                 "127.0.0.1",
-                "JUnit")));
+                "JUnit"));
+
+        assertTrue(result.isFailure());
+        assertEquals("erro especifico", result.getErrors().getFirst().message());
     }
 
     private static User usuarioValido() {

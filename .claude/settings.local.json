@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wsl -e bash -c \"cd /mnt/c/Users/bruno.dias/Documents/bruno/btree_backend && mvn clean install 2>&1\")"
+    ]
+  }
+}
