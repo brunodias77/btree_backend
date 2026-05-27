@@ -6,6 +6,7 @@ import com.btree.shared.contract.TokenProvider;
 import com.btree.shared.contract.TransactionManager;
 import com.btree.shared.enums.TokenType;
 import com.btree.shared.event.DomainEventPublisher;
+import com.btree.shared.exception.DomainException;
 import com.btree.shared.usecase.UseCase;
 import com.btree.shared.usecase.UseCaseResponse;
 import com.btree.shared.validation.Error;
@@ -77,7 +78,7 @@ public class LoginUserUseCase implements UseCase<LoginUserInput, LoginUserOutput
         final var notification = Notification.create();
 
         if (input == null) {
-            return UseCaseResponse.failure(new Error("'input' não pode ser nulo"));
+            return UseCaseResponse.failure(Notification.create(new Error("'input' não pode ser nulo")));
         }
 
         final var deviceInfo = DeviceInfo.of(input.ipAddress(), input.userAgent());
@@ -152,7 +153,8 @@ public class LoginUserUseCase implements UseCase<LoginUserInput, LoginUserOutput
         );
         final var history = LoginHistory.recordSuccess(user.getId(), LOCAL_LOGIN_PROVIDER, deviceInfo);
 
-        return UseCaseResponse.from(() -> this.transactionManager.execute(() -> {
+        try {
+            return UseCaseResponse.success(this.transactionManager.execute(() -> {
                 this.userGateway.update(user); // persiste o reset do accessFailedCount
                 this.sessionGateway.create(session);
                 this.loginHistoryGateway.create(history);
@@ -169,6 +171,12 @@ public class LoginUserUseCase implements UseCase<LoginUserInput, LoginUserOutput
                         null
                 );
             }));
+        } catch (final DomainException ex) {
+            if (ex.getClass() != DomainException.class) throw ex;
+            return UseCaseResponse.failure(Notification.create().appendAll(ex.getErrors()));
+        } catch (final Throwable t) {
+            return UseCaseResponse.failure(Notification.create(t));
+        }
     }
 
     /** Persiste o usuário sem lançar exceção (usado para desbloqueio automático). */
@@ -243,7 +251,8 @@ public class LoginUserUseCase implements UseCase<LoginUserInput, LoginUserOutput
         final var username = user.getUsername();
         final var email = user.getEmail();
 
-        return UseCaseResponse.from(() -> this.transactionManager.execute(() -> {
+        try {
+            return UseCaseResponse.success(this.transactionManager.execute(() -> {
                 this.userGateway.update(user);  // persiste reset do accessFailedCount
                 this.userTokenGateway.create(twoFactorToken);
                 publishAndClearDomainEvents(user);
@@ -259,6 +268,12 @@ public class LoginUserUseCase implements UseCase<LoginUserInput, LoginUserOutput
                         transactionId
                 );
             }));
+        } catch (final DomainException ex) {
+            if (ex.getClass() != DomainException.class) throw ex;
+            return UseCaseResponse.failure(Notification.create().appendAll(ex.getErrors()));
+        } catch (final Throwable t) {
+            return UseCaseResponse.failure(Notification.create(t));
+        }
     }
 
     private void publishAndClearDomainEvents(final User user) {

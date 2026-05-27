@@ -4,6 +4,7 @@ import com.btree.shared.contract.TokenHasher;
 import com.btree.shared.contract.TransactionManager;
 import com.btree.shared.enums.TokenType;
 import com.btree.shared.event.DomainEventPublisher;
+import com.btree.shared.exception.DomainException;
 import com.btree.shared.usecase.UnitUseCase;
 import com.btree.shared.usecase.UseCaseResponse;
 import com.btree.shared.validation.Error;
@@ -37,7 +38,7 @@ public class VerifyEmailUseCase implements UnitUseCase<VerifyEmailInput> {
     @Override
     public UseCaseResponse<Void> execute(final VerifyEmailInput input) {
         if (input == null) {
-            return UseCaseResponse.failure(new Error("'input' nao pode ser nulo"));
+            return UseCaseResponse.failure(Notification.create(new Error("'input' nao pode ser nulo")));
         }
 
         final var notification = Notification.create();
@@ -87,7 +88,8 @@ public class VerifyEmailUseCase implements UnitUseCase<VerifyEmailInput> {
             return UseCaseResponse.failure(notification);
         }
 
-        return UseCaseResponse.from(() -> transactionManager.execute(() -> {
+        try {
+            transactionManager.execute(() -> {
                 userToken.markAsUsed();
                 userTokenGateway.update(userToken);
 
@@ -98,7 +100,14 @@ public class VerifyEmailUseCase implements UnitUseCase<VerifyEmailInput> {
                 user.clearDomainEvents();
 
                 return null;
-            }));
+            });
+            return UseCaseResponse.success(null);
+        } catch (final DomainException ex) {
+            if (ex.getClass() != DomainException.class) throw ex;
+            return UseCaseResponse.failure(Notification.create().appendAll(ex.getErrors()));
+        } catch (final Throwable t) {
+            return UseCaseResponse.failure(Notification.create(t));
+        }
     }
 
     private static boolean hasText(final String value) {

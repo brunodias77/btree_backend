@@ -2,6 +2,7 @@ package com.btree.api.controller;
 
 import com.btree.api.dto.ApiResponse;
 import com.btree.api.dto.request.user.RegisterUserRequest;
+import com.btree.shared.validation.Notification;
 import com.btree.api.dto.request.user.VerifyEmailRequest;
 import com.btree.api.dto.response.user.RegisterUserResponse;
 import com.btree.api.mapper.AuthHttpStatusMapper;
@@ -41,14 +42,15 @@ public class AuthController {
             final HttpServletRequest servletRequest) {
         final var result = registerUserUseCase.execute(request.toInput());
 
-        if (result.hasError()) {
-            final var status = AuthHttpStatusMapper.register(result.notification());
+        if (result.isFailure()) {
+            final var notification = Notification.create().appendAll(result.getErrors());
+            final var status = AuthHttpStatusMapper.register(notification);
 
             return ResponseEntity.status(status).body(
                     ApiResponse.error(
                             status,
                             status.getReasonPhrase(),
-                            result.notification(),
+                            notification,
                             servletRequest.getRequestURI()));
         }
 
@@ -56,7 +58,7 @@ public class AuthController {
                 ApiResponse.success(
                         HttpStatus.CREATED,
                         "Usuario registrado com sucesso",
-                        RegisterUserResponse.from(result.output()),
+                        RegisterUserResponse.from(result.getOutput()),
                         servletRequest.getRequestURI()));
     }
 
@@ -67,14 +69,15 @@ public class AuthController {
             final HttpServletRequest servletRequest) {
         final var result = verifyEmailUseCase.execute(request.toInput());
 
-        if (result.hasError()) {
-            final var status = AuthHttpStatusMapper.verifyEmail(result.notification());
+        if (result.isFailure()) {
+            final var notification = Notification.create().appendAll(result.getErrors());
+            final var status = AuthHttpStatusMapper.verifyEmail(notification);
 
             return ResponseEntity.status(status).body(
                     ApiResponse.error(
                             status,
                             status.getReasonPhrase(),
-                            result.notification(),
+                            notification,
                             servletRequest.getRequestURI()));
         }
 

@@ -95,9 +95,9 @@ class RegisterUserUseCaseTest {
                 "Senha@123"));
 
         assertTrue(result.isSuccess());
-        assertEquals("cliente_teste", result.output().username());
-        assertEquals("cliente.teste@example.com", result.output().email());
-        assertFalse(result.output().emailVerified());
+        assertEquals("cliente_teste", result.getOutput().username());
+        assertEquals("cliente.teste@example.com", result.getOutput().email());
+        assertFalse(result.getOutput().emailVerified());
 
         final var userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userGateway).save(userCaptor.capture());
@@ -126,8 +126,8 @@ class RegisterUserUseCaseTest {
     void DEVE_RETORNAR_ERRO_QUANDO_INPUT_FOR_NULO() {
         final var result = useCase.execute(null);
 
-        assertTrue(result.hasError());
-        assertEquals("'input' não pode ser nulo", result.notification().firstError().message());
+        assertTrue(result.isFailure());
+        assertEquals("'input' não pode ser nulo", result.getErrors().getFirst().message());
         verify(transactionManager, never()).execute(any());
     }
 
@@ -138,10 +138,10 @@ class RegisterUserUseCaseTest {
                 "cliente@example.com",
                 "abc"));
 
-        assertTrue(result.hasError());
-        assertTrue(result.notification().getErrors().stream()
+        assertTrue(result.isFailure());
+        assertTrue(result.getErrors().stream()
                 .anyMatch(error -> error.message().contains("mínimo 8")));
-        assertTrue(result.notification().getErrors().stream()
+        assertTrue(result.getErrors().stream()
                 .anyMatch(error -> error.message().contains("letra maiúscula")));
         verify(transactionManager, never()).execute(any());
     }
@@ -156,9 +156,9 @@ class RegisterUserUseCaseTest {
                 "cliente@example.com",
                 "Senha@123"));
 
-        assertTrue(result.hasError());
-        assertTrue(result.notification().getErrors().contains(UserError.USERNAME_ALREADY_EXISTS));
-        assertTrue(result.notification().getErrors().contains(UserError.EMAIL_ALREADY_EXISTS));
+        assertTrue(result.isFailure());
+        assertTrue(result.getErrors().contains(UserError.USERNAME_ALREADY_EXISTS));
+        assertTrue(result.getErrors().contains(UserError.EMAIL_ALREADY_EXISTS));
         verify(transactionManager, never()).execute(any());
     }
 
@@ -171,10 +171,10 @@ class RegisterUserUseCaseTest {
                 "email-invalido",
                 "Senha@123"));
 
-        assertTrue(result.hasError());
-        assertTrue(result.notification().getErrors().stream()
+        assertTrue(result.isFailure());
+        assertTrue(result.getErrors().stream()
                 .anyMatch(error -> error.message().contains("'username' de formato inválido")));
-        assertTrue(result.notification().getErrors().stream()
+        assertTrue(result.getErrors().stream()
                 .anyMatch(error -> error.message().contains("'email' de formato inválido")));
     }
 

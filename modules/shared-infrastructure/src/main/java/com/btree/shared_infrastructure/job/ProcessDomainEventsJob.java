@@ -7,6 +7,7 @@ import com.btree.shared.gateway.ProcessedEventGateway;
 import com.btree.shared.job.Job;
 import com.btree.shared.job.JobResult;
 import com.btree.shared.usecase.UseCaseResponse;
+import com.btree.shared.validation.Notification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -99,7 +100,7 @@ public class ProcessDomainEventsJob implements Job<ProcessDomainEvents> {
         } catch (final Throwable throwable) {
             log.error("[ProcessDomainEvents] Falha inesperada no job: {}",
                     throwable.getMessage(), throwable);
-            return UseCaseResponse.failure(throwable);
+            return UseCaseResponse.failure(Notification.create(throwable));
         }
     }
 
