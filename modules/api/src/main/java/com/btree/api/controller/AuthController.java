@@ -41,14 +41,14 @@ public class AuthController {
             final HttpServletRequest servletRequest) {
         final var result = registerUserUseCase.execute(request.toInput());
 
-        if (result.isLeft()) {
-            final var status = AuthHttpStatusMapper.register(result.getLeft());
+        if (result.hasError()) {
+            final var status = AuthHttpStatusMapper.register(result.notification());
 
             return ResponseEntity.status(status).body(
                     ApiResponse.error(
                             status,
                             status.getReasonPhrase(),
-                            result.getLeft(),
+                            result.notification(),
                             servletRequest.getRequestURI()));
         }
 
@@ -56,7 +56,7 @@ public class AuthController {
                 ApiResponse.success(
                         HttpStatus.CREATED,
                         "Usuario registrado com sucesso",
-                        RegisterUserResponse.from(result.get()),
+                        RegisterUserResponse.from(result.output()),
                         servletRequest.getRequestURI()));
     }
 
@@ -67,14 +67,14 @@ public class AuthController {
             final HttpServletRequest servletRequest) {
         final var result = verifyEmailUseCase.execute(request.toInput());
 
-        if (result.isLeft()) {
-            final var status = AuthHttpStatusMapper.verifyEmail(result.getLeft());
+        if (result.hasError()) {
+            final var status = AuthHttpStatusMapper.verifyEmail(result.notification());
 
             return ResponseEntity.status(status).body(
                     ApiResponse.error(
                             status,
                             status.getReasonPhrase(),
-                            result.getLeft(),
+                            result.notification(),
                             servletRequest.getRequestURI()));
         }
 

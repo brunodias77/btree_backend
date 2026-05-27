@@ -89,8 +89,8 @@ class LoginUserUseCaseTest {
     void DEVE_RETORNAR_ERRO_QUANDO_INPUT_FOR_NULO() {
         final var result = useCase.execute(null);
 
-        assertTrue(result.isLeft());
-        assertEquals("'input' não pode ser nulo", result.getLeft().firstError().message());
+        assertTrue(result.hasError());
+        assertEquals("'input' não pode ser nulo", result.notification().firstError().message());
         verify(userGateway, never()).findByEmail(any());
     }
 
@@ -115,12 +115,12 @@ class LoginUserUseCaseTest {
                 "127.0.0.1",
                 "JUnit"));
 
-        assertTrue(result.isRight());
-        assertEquals("access-token", result.get().accessToken());
-        assertEquals("refresh-token", result.get().refreshToken());
-        assertFalse(result.get().requiresTwoFactor());
-        assertNull(result.get().transactionId());
-        assertTrue(result.get().roles().contains("customer"));
+        assertTrue(result.isSuccess());
+        assertEquals("access-token", result.output().accessToken());
+        assertEquals("refresh-token", result.output().refreshToken());
+        assertFalse(result.output().requiresTwoFactor());
+        assertNull(result.output().transactionId());
+        assertTrue(result.output().roles().contains("customer"));
 
         final var sessionCaptor = ArgumentCaptor.forClass(Session.class);
         verify(sessionGateway).create(sessionCaptor.capture());
@@ -143,8 +143,8 @@ class LoginUserUseCaseTest {
                 "127.0.0.1",
                 "JUnit"));
 
-        assertTrue(result.isLeft());
-        assertEquals(UserError.ACCOUNT_DISABLED, result.getLeft().firstError());
+        assertTrue(result.hasError());
+        assertEquals(UserError.ACCOUNT_DISABLED, result.notification().firstError());
         verify(loginHistoryGateway).create(any(LoginHistory.class));
         verify(passwordHasher, never()).matches(any(), any());
     }
@@ -159,8 +159,8 @@ class LoginUserUseCaseTest {
                 "127.0.0.1",
                 "JUnit"));
 
-        assertTrue(result.isLeft());
-        assertEquals(UserError.INVALID_CREDENTIALS, result.getLeft().firstError());
+        assertTrue(result.hasError());
+        assertEquals(UserError.INVALID_CREDENTIALS, result.notification().firstError());
         verify(loginHistoryGateway).create(any(LoginHistory.class));
         verify(passwordHasher, never()).matches(any(), any());
     }
@@ -180,8 +180,8 @@ class LoginUserUseCaseTest {
                 "127.0.0.1",
                 "JUnit"));
 
-        assertTrue(result.isLeft());
-        assertEquals(UserError.INVALID_CREDENTIALS, result.getLeft().firstError());
+        assertTrue(result.hasError());
+        assertEquals(UserError.INVALID_CREDENTIALS, result.notification().firstError());
         assertTrue(user.isAccountLocked());
         assertNotNull(user.getLockExpiresAt());
         verify(userGateway).update(user);
@@ -201,8 +201,8 @@ class LoginUserUseCaseTest {
                 "127.0.0.1",
                 "JUnit"));
 
-        assertTrue(result.isLeft());
-        assertEquals(UserError.ACCOUNT_LOCKED, result.getLeft().firstError());
+        assertTrue(result.hasError());
+        assertEquals(UserError.ACCOUNT_LOCKED, result.notification().firstError());
         verify(passwordHasher, never()).matches(any(), any());
         verify(loginHistoryGateway).create(any(LoginHistory.class));
     }
@@ -227,7 +227,7 @@ class LoginUserUseCaseTest {
                 "127.0.0.1",
                 "JUnit"));
 
-        assertTrue(result.isRight());
+        assertTrue(result.isSuccess());
         assertFalse(user.isAccountLocked());
         assertNull(user.getLockExpiresAt());
         verify(userGateway, org.mockito.Mockito.atLeastOnce()).update(user);
@@ -250,11 +250,11 @@ class LoginUserUseCaseTest {
                 "127.0.0.1",
                 "JUnit"));
 
-        assertTrue(result.isRight());
-        assertTrue(result.get().requiresTwoFactor());
-        assertNotNull(result.get().transactionId());
-        assertNull(result.get().accessToken());
-        assertNull(result.get().refreshToken());
+        assertTrue(result.isSuccess());
+        assertTrue(result.output().requiresTwoFactor());
+        assertNotNull(result.output().transactionId());
+        assertNull(result.output().accessToken());
+        assertNull(result.output().refreshToken());
 
         final var tokenCaptor = ArgumentCaptor.forClass(UserToken.class);
         verify(userTokenGateway).create(tokenCaptor.capture());
@@ -283,8 +283,8 @@ class LoginUserUseCaseTest {
                 "127.0.0.1",
                 "JUnit"));
 
-        assertTrue(result.isLeft());
-        assertEquals("falha de dominio", result.getLeft().firstError().message());
+        assertTrue(result.hasError());
+        assertEquals("falha de dominio", result.notification().firstError().message());
     }
 
     @Test

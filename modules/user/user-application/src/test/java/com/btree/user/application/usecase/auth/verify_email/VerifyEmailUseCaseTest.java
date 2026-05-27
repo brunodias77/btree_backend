@@ -73,7 +73,7 @@ class VerifyEmailUseCaseTest {
 
         final var result = useCase.execute(new VerifyEmailInput(" token-bruto "));
 
-        assertTrue(result.isRight());
+        assertTrue(result.isSuccess());
         assertTrue(user.isEmailVerified());
         assertTrue(userToken.isUsed());
 
@@ -90,8 +90,8 @@ class VerifyEmailUseCaseTest {
     void DEVE_RETORNAR_ERRO_QUANDO_INPUT_FOR_NULO() {
         final var result = useCase.execute(null);
 
-        assertTrue(result.isLeft());
-        assertEquals("'input' nao pode ser nulo", result.getLeft().firstError().message());
+        assertTrue(result.hasError());
+        assertEquals("'input' nao pode ser nulo", result.notification().firstError().message());
         verify(tokenHasher, never()).hash(any());
     }
 
@@ -99,8 +99,8 @@ class VerifyEmailUseCaseTest {
     void DEVE_RETORNAR_ERRO_QUANDO_TOKEN_FOR_VAZIO() {
         final var result = useCase.execute(new VerifyEmailInput(" "));
 
-        assertTrue(result.isLeft());
-        assertEquals(UserError.TOKEN_NOT_FOUND, result.getLeft().firstError());
+        assertTrue(result.hasError());
+        assertEquals(UserError.TOKEN_NOT_FOUND, result.notification().firstError());
         verify(tokenHasher, never()).hash(any());
     }
 
@@ -111,8 +111,8 @@ class VerifyEmailUseCaseTest {
 
         final var result = useCase.execute(new VerifyEmailInput("token-bruto"));
 
-        assertTrue(result.isLeft());
-        assertEquals(UserError.TOKEN_NOT_FOUND, result.getLeft().firstError());
+        assertTrue(result.hasError());
+        assertEquals(UserError.TOKEN_NOT_FOUND, result.notification().firstError());
         verify(transactionManager, never()).execute(any());
     }
 
@@ -124,8 +124,8 @@ class VerifyEmailUseCaseTest {
 
         final var result = useCase.execute(new VerifyEmailInput("token-bruto"));
 
-        assertTrue(result.isLeft());
-        assertEquals(UserError.TOKEN_INVALID_TYPE, result.getLeft().firstError());
+        assertTrue(result.hasError());
+        assertEquals(UserError.TOKEN_INVALID_TYPE, result.notification().firstError());
         verify(transactionManager, never()).execute(any());
     }
 
@@ -144,8 +144,8 @@ class VerifyEmailUseCaseTest {
 
         final var result = useCase.execute(new VerifyEmailInput("token-bruto"));
 
-        assertTrue(result.isLeft());
-        assertEquals(UserError.TOKEN_EXPIRED, result.getLeft().firstError());
+        assertTrue(result.hasError());
+        assertEquals(UserError.TOKEN_EXPIRED, result.notification().firstError());
         verify(transactionManager, never()).execute(any());
     }
 
@@ -162,8 +162,8 @@ class VerifyEmailUseCaseTest {
 
         final var result = useCase.execute(new VerifyEmailInput("token-bruto"));
 
-        assertTrue(result.isLeft());
-        assertEquals(UserError.TOKEN_ALREADY_USED, result.getLeft().firstError());
+        assertTrue(result.hasError());
+        assertEquals(UserError.TOKEN_ALREADY_USED, result.notification().firstError());
         verify(transactionManager, never()).execute(any());
     }
 
@@ -180,8 +180,8 @@ class VerifyEmailUseCaseTest {
 
         final var result = useCase.execute(new VerifyEmailInput("token-bruto"));
 
-        assertTrue(result.isLeft());
-        assertEquals(UserError.USER_NOT_FOUND, result.getLeft().firstError());
+        assertTrue(result.hasError());
+        assertEquals(UserError.USER_NOT_FOUND, result.notification().firstError());
         verify(transactionManager, never()).execute(any());
     }
 
@@ -200,8 +200,8 @@ class VerifyEmailUseCaseTest {
 
         final var result = useCase.execute(new VerifyEmailInput("token-bruto"));
 
-        assertTrue(result.isLeft());
-        assertEquals(UserError.EMAIL_ALREADY_VERIFIED, result.getLeft().firstError());
+        assertTrue(result.hasError());
+        assertEquals(UserError.EMAIL_ALREADY_VERIFIED, result.notification().firstError());
         assertFalse(token.isUsed());
         verify(transactionManager, never()).execute(any());
     }

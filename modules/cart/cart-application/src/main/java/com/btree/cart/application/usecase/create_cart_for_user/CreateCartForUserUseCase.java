@@ -4,12 +4,9 @@ import com.btree.cart.domain.aggregate_root.Cart;
 import com.btree.cart.domain.persistence.CartGateway;
 import com.btree.shared.contract.TransactionManager;
 import com.btree.shared.usecase.UnitUseCase;
+import com.btree.shared.usecase.UseCaseResponse;
 import com.btree.shared.validation.Error;
 import com.btree.shared.validation.Notification;
-import io.vavr.control.Either;
-
-import static io.vavr.API.Left;
-import static io.vavr.API.Right;
 
 public class CreateCartForUserUseCase implements UnitUseCase<CreateCartForUserInput> {
 
@@ -25,32 +22,30 @@ public class CreateCartForUserUseCase implements UnitUseCase<CreateCartForUserIn
     }
 
     @Override
-    public Either<Notification, Void> execute(final CreateCartForUserInput input) {
+    public UseCaseResponse<Void> execute(final CreateCartForUserInput input) {
         final var notification = Notification.create();
 
         if (input == null || input.userId() == null) {
             notification.append(new Error("User id is required to create a cart."));
-            return Left(notification);
+            return UseCaseResponse.failure(notification);
         }
 
         if (cartGateway.existsActiveByUserId(input.userId())) {
-            return Right(null);
+            return UseCaseResponse.success();
         }
 
         final var cart = Cart.createForUser(input.userId());
         cart.validate(notification);
 
         if (notification.hasError()) {
-            return Left(notification);
+            return UseCaseResponse.failure(notification);
         }
 
-        transactionManager.execute(() -> {
+        return UseCaseResponse.from(() -> transactionManager.execute(() -> {
             if (!cartGateway.existsActiveByUserId(input.userId())) {
                 cartGateway.create(cart);
             }
             return (Void) null;
-        });
-
-        return Right(null);
+        }));
     }
 }

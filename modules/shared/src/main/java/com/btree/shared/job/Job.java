@@ -1,8 +1,7 @@
 package com.btree.shared.job;
 
-import com.btree.shared.validation.Notification;
-import io.vavr.control.Either;
+import com.btree.shared.usecase.UseCaseResponse;
 
 public interface Job<IN> {
-    Either<Notification, JobResult> execute(IN input);
+    UseCaseResponse<JobResult> execute(IN input);
 }

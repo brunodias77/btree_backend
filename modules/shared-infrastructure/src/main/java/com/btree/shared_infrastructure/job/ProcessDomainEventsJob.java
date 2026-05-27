@@ -6,8 +6,7 @@ import com.btree.shared.gateway.OutboxEventGateway;
 import com.btree.shared.gateway.ProcessedEventGateway;
 import com.btree.shared.job.Job;
 import com.btree.shared.job.JobResult;
-import com.btree.shared.validation.Notification;
-import io.vavr.control.Either;
+import com.btree.shared.usecase.UseCaseResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -15,8 +14,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
-
-import static io.vavr.API.Try;
 
 @Component
 public class ProcessDomainEventsJob implements Job<ProcessDomainEvents> {
@@ -40,13 +37,13 @@ public class ProcessDomainEventsJob implements Job<ProcessDomainEvents> {
     }
 
     @Override
-    public Either<Notification, JobResult> execute(final ProcessDomainEvents input) {
-        return Try(() -> {
+    public UseCaseResponse<JobResult> execute(final ProcessDomainEvents input) {
+        try {
             final var pending = outboxEventGateway.findPending(input.batchSize());
 
             if (pending.isEmpty()) {
                 log.debug("[ProcessDomainEvents] Nenhum evento pendente.");
-                return JobResult.empty();
+                return UseCaseResponse.success(JobResult.empty());
             }
 
             int processed = 0;
@@ -98,13 +95,12 @@ public class ProcessDomainEventsJob implements Job<ProcessDomainEvents> {
                         processed, skipped, failed);
             }
 
-            return JobResult.of(processed, skipped, failed);
-
-        }).toEither().mapLeft(throwable -> {
+            return UseCaseResponse.success(JobResult.of(processed, skipped, failed));
+        } catch (final Throwable throwable) {
             log.error("[ProcessDomainEvents] Falha inesperada no job: {}",
                     throwable.getMessage(), throwable);
-            return Notification.create(throwable);
-        });
+            return UseCaseResponse.failure(throwable);
+        }
     }
 
     private Optional<OutboxEventHandler> findHandler(final OutboxEventGateway.PendingEvent event) {

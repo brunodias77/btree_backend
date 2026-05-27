@@ -4,14 +4,13 @@ import com.btree.shared.contract.TokenHasher;
 import com.btree.shared.contract.TransactionManager;
 import com.btree.shared.enums.TokenType;
 import com.btree.shared.event.DomainEventPublisher;
-import com.btree.shared.exception.DomainException;
 import com.btree.shared.usecase.UnitUseCase;
+import com.btree.shared.usecase.UseCaseResponse;
 import com.btree.shared.validation.Error;
 import com.btree.shared.validation.Notification;
 import com.btree.user.domain.error.UserError;
 import com.btree.user.domain.persistence.UserGateway;
 import com.btree.user.domain.persistence.UserTokenGateway;
-import io.vavr.control.Either;
 
 public class VerifyEmailUseCase implements UnitUseCase<VerifyEmailInput> {
 
@@ -36,9 +35,9 @@ public class VerifyEmailUseCase implements UnitUseCase<VerifyEmailInput> {
     }
 
     @Override
-    public Either<Notification, Void> execute(final VerifyEmailInput input) {
+    public UseCaseResponse<Void> execute(final VerifyEmailInput input) {
         if (input == null) {
-            return Either.left(Notification.create(new Error("'input' nao pode ser nulo")));
+            return UseCaseResponse.failure(new Error("'input' nao pode ser nulo"));
         }
 
         final var notification = Notification.create();
@@ -46,7 +45,7 @@ public class VerifyEmailUseCase implements UnitUseCase<VerifyEmailInput> {
 
         if (!hasText(rawToken)) {
             notification.append(UserError.TOKEN_NOT_FOUND);
-            return Either.left(notification);
+            return UseCaseResponse.failure(notification);
         }
 
         final var tokenHash = tokenHasher.hash(rawToken);
@@ -54,42 +53,41 @@ public class VerifyEmailUseCase implements UnitUseCase<VerifyEmailInput> {
 
         if (tokenOpt.isEmpty()) {
             notification.append(UserError.TOKEN_NOT_FOUND);
-            return Either.left(notification);
+            return UseCaseResponse.failure(notification);
         }
 
         final var userToken = tokenOpt.get();
 
         if (!TokenType.EMAIL_VERIFICATION.name().equals(userToken.getTokenType())) {
             notification.append(UserError.TOKEN_INVALID_TYPE);
-            return Either.left(notification);
+            return UseCaseResponse.failure(notification);
         }
 
         if (userToken.isExpired()) {
             notification.append(UserError.TOKEN_EXPIRED);
-            return Either.left(notification);
+            return UseCaseResponse.failure(notification);
         }
 
         if (userToken.isUsed()) {
             notification.append(UserError.TOKEN_ALREADY_USED);
-            return Either.left(notification);
+            return UseCaseResponse.failure(notification);
         }
 
         final var userOpt = userGateway.findById(userToken.getUserId());
 
         if (userOpt.isEmpty()) {
             notification.append(UserError.USER_NOT_FOUND);
-            return Either.left(notification);
+            return UseCaseResponse.failure(notification);
         }
 
         final var user = userOpt.get();
 
         if (user.isEmailVerified()) {
             notification.append(UserError.EMAIL_ALREADY_VERIFIED);
-            return Either.left(notification);
+            return UseCaseResponse.failure(notification);
         }
 
-        try {
-            transactionManager.execute(() -> {
+        return UseCaseResponse.from(() -> transactionManager.execute(() -> {
                 userToken.markAsUsed();
                 userTokenGateway.update(userToken);
 
@@ -100,18 +98,7 @@ public class VerifyEmailUseCase implements UnitUseCase<VerifyEmailInput> {
                 user.clearDomainEvents();
 
                 return null;
-            });
-
-            return Either.right(null);
-        } catch (final DomainException ex) {
-            if (ex.getClass() != DomainException.class) {
-                throw ex;
-            }
-
-            final var domainNotification = Notification.create();
-            ex.getErrors().forEach(domainNotification::append);
-            return Either.left(domainNotification);
-        }
+            }));
     }
 
     private static boolean hasText(final String value) {

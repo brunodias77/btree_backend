@@ -30,8 +30,8 @@ public class UserRegisteredCartOutboxHandler implements OutboxEventHandler {
         final var userId = UUID.fromString(event.aggregateId());
         final var result = createCartForUserUseCase.execute(new CreateCartForUserInput(userId));
 
-        if (result.isLeft()) {
-            throw new IllegalStateException("Could not create cart for registered user " + userId + ": " + result.getLeft().getErrors());
+        if (result.hasError()) {
+            throw new IllegalStateException("Could not create cart for registered user " + userId + ": " + result.errors());
         }
     }
 }

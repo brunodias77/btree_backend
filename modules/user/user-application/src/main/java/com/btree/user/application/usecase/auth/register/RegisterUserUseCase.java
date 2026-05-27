@@ -7,9 +7,9 @@ import com.btree.shared.contract.TransactionManager;
 import com.btree.shared.event.DomainEventPublisher;
 import com.btree.shared.event.IntegrationEventPublisher;
 import com.btree.shared.event.user.UserRegisteredIntegrationEvent;
-import com.btree.shared.exception.DomainException;
 import com.btree.shared.enums.TokenType;
 import com.btree.shared.usecase.UseCase;
+import com.btree.shared.usecase.UseCaseResponse;
 import com.btree.shared.validation.Error;
 import com.btree.shared.validation.Notification;
 import com.btree.user.domain.aggregate_root.User;
@@ -18,7 +18,6 @@ import com.btree.user.domain.error.UserError;
 import com.btree.user.domain.persistence.UserGateway;
 import com.btree.user.domain.persistence.UserTokenGateway;
 import com.btree.user.domain.validator.UserValidator;
-import io.vavr.control.Either;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -59,32 +58,21 @@ public class RegisterUserUseCase implements UseCase<RegisterUserInput, RegisterU
     }
 
     @Override
-    public Either<Notification, RegisterUserOutput> execute(final RegisterUserInput input) {
+    public UseCaseResponse<RegisterUserOutput> execute(final RegisterUserInput input) {
         final var notification = Notification.create();
 
         if (input == null) {
-            return Either.left(Notification.create(new Error("'input' não pode ser nulo")));
+            return UseCaseResponse.failure(new Error("'input' não pode ser nulo"));
         }
 
         UserValidator.validatePassword(input.password(), notification);
         checkUniqueness(input, notification);
 
         if (notification.hasError()) {
-            return Either.left(notification);
+            return UseCaseResponse.failure(notification);
         }
 
-        try {
-            final var output = transactionManager.execute(() -> register(input));
-            return Either.right(output);
-        } catch (final DomainException ex) {
-            if (ex.getClass() != DomainException.class) {
-                throw ex;
-            }
-
-            final var domainNotification = Notification.create();
-            ex.getErrors().forEach(domainNotification::append);
-            return Either.left(domainNotification);
-        }
+        return UseCaseResponse.from(() -> transactionManager.execute(() -> register(input)));
     }
 
     private void checkUniqueness(final RegisterUserInput input, final Notification notification) {

@@ -47,6 +47,14 @@ public class Notification implements ValidationHandler {
         return this;
     }
 
+    /** Adiciona todos os erros informados; ignora listas nulas. */
+    public Notification appendAll(final List<Error> errors) {
+        if (errors != null) {
+            errors.forEach(this::append);
+        }
+        return this;
+    }
+
     /** Retorna uma visão não-modificável da lista de erros acumulados. */
     @Override
     public List<Error> getErrors() { return Collections.unmodifiableList(this.errors); }

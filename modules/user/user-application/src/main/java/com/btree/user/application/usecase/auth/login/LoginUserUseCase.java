@@ -6,8 +6,8 @@ import com.btree.shared.contract.TokenProvider;
 import com.btree.shared.contract.TransactionManager;
 import com.btree.shared.enums.TokenType;
 import com.btree.shared.event.DomainEventPublisher;
-import com.btree.shared.exception.DomainException;
 import com.btree.shared.usecase.UseCase;
+import com.btree.shared.usecase.UseCaseResponse;
 import com.btree.shared.validation.Error;
 import com.btree.shared.validation.Notification;
 import com.btree.user.domain.aggregate_root.Session;
@@ -20,7 +20,6 @@ import com.btree.user.domain.persistence.SessionGateway;
 import com.btree.user.domain.persistence.UserGateway;
 import com.btree.user.domain.persistence.UserTokenGateway;
 import com.btree.user.domain.value_object.DeviceInfo;
-import io.vavr.control.Either;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -74,11 +73,11 @@ public class LoginUserUseCase implements UseCase<LoginUserInput, LoginUserOutput
     }
 
     @Override
-    public Either<Notification, LoginUserOutput> execute(final LoginUserInput input) {
+    public UseCaseResponse<LoginUserOutput> execute(final LoginUserInput input) {
         final var notification = Notification.create();
 
         if (input == null) {
-            return Either.left(Notification.create(new Error("'input' não pode ser nulo")));
+            return UseCaseResponse.failure(new Error("'input' não pode ser nulo"));
         }
 
         final var deviceInfo = DeviceInfo.of(input.ipAddress(), input.userAgent());
@@ -88,7 +87,7 @@ public class LoginUserUseCase implements UseCase<LoginUserInput, LoginUserOutput
         if (userOpt.isEmpty()) {
             recordFailedAttempt((UUID) null, deviceInfo, "Usuário não encontrado");
             notification.append(UserError.INVALID_CREDENTIALS);
-            return Either.left(notification);
+            return UseCaseResponse.failure(notification);
         }
 
         final var user = userOpt.get();
@@ -96,7 +95,7 @@ public class LoginUserUseCase implements UseCase<LoginUserInput, LoginUserOutput
         if (!user.isEnabled()) {
             recordFailedAttempt(user.getId(), deviceInfo, "Conta desativada");
             notification.append(UserError.ACCOUNT_DISABLED);
-            return Either.left(notification);
+            return UseCaseResponse.failure(notification);
         }
 
         if (user.isAccountLocked()) {
@@ -107,14 +106,14 @@ public class LoginUserUseCase implements UseCase<LoginUserInput, LoginUserOutput
             } else {
                 recordFailedAttempt(user.getId(), deviceInfo, "Conta bloqueada");
                 notification.append(UserError.ACCOUNT_LOCKED);
-                return Either.left(notification);
+                return UseCaseResponse.failure(notification);
             }
         }
 
         if (!this.passwordHasher.matches(input.password(), user.getPasswordHash())) {
             recordFailedAttempt(user, deviceInfo, "Senha inválida");
             notification.append(UserError.INVALID_CREDENTIALS);
-            return Either.left(notification);
+            return UseCaseResponse.failure(notification);
         }
 
         // zerar contador de falhas em caso de sucesso
@@ -153,8 +152,7 @@ public class LoginUserUseCase implements UseCase<LoginUserInput, LoginUserOutput
         );
         final var history = LoginHistory.recordSuccess(user.getId(), LOCAL_LOGIN_PROVIDER, deviceInfo);
 
-        try {
-            final var output = this.transactionManager.execute(() -> {
+        return UseCaseResponse.from(() -> this.transactionManager.execute(() -> {
                 this.userGateway.update(user); // persiste o reset do accessFailedCount
                 this.sessionGateway.create(session);
                 this.loginHistoryGateway.create(history);
@@ -170,15 +168,7 @@ public class LoginUserUseCase implements UseCase<LoginUserInput, LoginUserOutput
                         false,
                         null
                 );
-            });
-            return Either.right(output);
-        } catch (final DomainException ex) {
-            if (ex.getClass() != DomainException.class) {
-                throw ex;
-            }
-
-            return Either.left(toNotification(ex));
-        }
+            }));
     }
 
     /** Persiste o usuário sem lançar exceção (usado para desbloqueio automático). */
@@ -236,7 +226,7 @@ public class LoginUserUseCase implements UseCase<LoginUserInput, LoginUserOutput
 
     // ── 2FA ──────────────────────────────────────────────────
 
-    private Either<Notification, LoginUserOutput> handleTwoFactorRequired(
+    private UseCaseResponse<LoginUserOutput> handleTwoFactorRequired(
             final User user,
             final DeviceInfo deviceInfo
     ) {
@@ -253,8 +243,7 @@ public class LoginUserUseCase implements UseCase<LoginUserInput, LoginUserOutput
         final var username = user.getUsername();
         final var email = user.getEmail();
 
-        try {
-            final var output = this.transactionManager.execute(() -> {
+        return UseCaseResponse.from(() -> this.transactionManager.execute(() -> {
                 this.userGateway.update(user);  // persiste reset do accessFailedCount
                 this.userTokenGateway.create(twoFactorToken);
                 publishAndClearDomainEvents(user);
@@ -269,15 +258,7 @@ public class LoginUserUseCase implements UseCase<LoginUserInput, LoginUserOutput
                         true,
                         transactionId
                 );
-            });
-            return Either.right(output);
-        } catch (final DomainException ex) {
-            if (ex.getClass() != DomainException.class) {
-                throw ex;
-            }
-
-            return Either.left(toNotification(ex));
-        }
+            }));
     }
 
     private void publishAndClearDomainEvents(final User user) {
@@ -285,12 +266,6 @@ public class LoginUserUseCase implements UseCase<LoginUserInput, LoginUserOutput
             this.eventPublisher.publishAll(user.getDomainEvents());
             user.clearDomainEvents();
         }
-    }
-
-    private static Notification toNotification(final DomainException ex) {
-        final var notification = Notification.create();
-        ex.getErrors().forEach(notification::append);
-        return notification;
     }
 
     private static String normalizeEmail(final String email) {
