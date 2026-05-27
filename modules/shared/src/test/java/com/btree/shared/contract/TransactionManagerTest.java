@@ -3,19 +3,17 @@ package com.btree.shared.contract;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 
 class TransactionManagerTest {
 
     @Test
     void DEVE_EXECUTAR_AFTER_COMMIT_PADRAO_IMEDIATAMENTE() {
         final var manager = new ImmediateTransactionManager();
-        final var action = mock(Runnable.class);
+        final var executions = new int[] {0};
 
-        manager.afterCommit(action);
+        manager.afterCommit(() -> executions[0]++);
 
-        verify(action).run();
+        assertEquals(1, executions[0]);
     }
 
     @Test
