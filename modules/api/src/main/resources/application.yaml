@@ -9,6 +9,14 @@ spring:
   jpa:
     open-in-view: false
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+
 outbox:
   polling:
     interval-ms: 5000

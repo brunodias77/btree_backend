@@ -62,7 +62,8 @@ public class OutboxEventPostgresGateway implements OutboxEventGateway {
                         e.getModule(),
                         e.getAggregateType(),
                         e.getAggregateId().toString(),
-                        e.getEventType()
+                        e.getEventType(),
+                        e.getPayload()
                 ))
                 .toList();
     }
@@ -89,7 +90,8 @@ public class OutboxEventPostgresGateway implements OutboxEventGateway {
                         e.getModule(),
                         e.getAggregateType(),
                         e.getAggregateId().toString(),
-                        e.getEventType()
+                        e.getEventType(),
+                        e.getPayload()
                 ))
                 .toList();
     }

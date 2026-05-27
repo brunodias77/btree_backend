@@ -77,11 +77,13 @@ public class RegisterUserUseCase implements UseCase<RegisterUserInput, RegisterU
             final var output = transactionManager.execute(() -> register(input));
             return Either.right(output);
         } catch (final DomainException ex) {
+            if (ex.getClass() != DomainException.class) {
+                throw ex;
+            }
+
             final var domainNotification = Notification.create();
             ex.getErrors().forEach(domainNotification::append);
             return Either.left(domainNotification);
-        } catch (final Exception ex) {
-            return Either.left(Notification.create(ex));
         }
     }
 
