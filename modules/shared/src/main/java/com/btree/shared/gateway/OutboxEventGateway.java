@@ -24,7 +24,8 @@ public interface OutboxEventGateway {
             String module,
             String aggregateType,
             String aggregateId,
-            String eventType
+            String eventType,
+            String payload
     ) {}
 
     /** Retorna até {@code limit} eventos não processados, ordenados FIFO. */

@@ -7,6 +7,7 @@ import com.btree.shared.contract.TransactionManager;
 import com.btree.shared.event.DomainEventPublisher;
 import com.btree.shared.event.IntegrationEventPublisher;
 import com.btree.user.application.usecase.auth.register.RegisterUserUseCase;
+import com.btree.user.application.usecase.auth.verify_email.VerifyEmailUseCase;
 import com.btree.user.domain.persistence.UserGateway;
 import com.btree.user.domain.persistence.UserTokenGateway;
 import org.springframework.context.annotation.Bean;
@@ -35,6 +36,23 @@ public class UserInfraApplication {
                 integrationEventPublisher,
                 transactionManager,
                 emailService
+        );
+    }
+
+    @Bean
+    VerifyEmailUseCase verifyEmailUseCase(
+            final UserTokenGateway userTokenGateway,
+            final UserGateway userGateway,
+            final TokenHasher tokenHasher,
+            final TransactionManager transactionManager,
+            final DomainEventPublisher domainEventPublisher
+    ) {
+        return new VerifyEmailUseCase(
+                userTokenGateway,
+                userGateway,
+                tokenHasher,
+                transactionManager,
+                domainEventPublisher
         );
     }
 }

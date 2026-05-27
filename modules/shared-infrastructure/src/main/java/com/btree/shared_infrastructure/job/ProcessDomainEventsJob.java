@@ -1,6 +1,7 @@
 package com.btree.shared_infrastructure.job;
 
 import com.btree.shared.contract.TransactionManager;
+import com.btree.shared.event.OutboxEventHandler;
 import com.btree.shared.gateway.OutboxEventGateway;
 import com.btree.shared.gateway.ProcessedEventGateway;
 import com.btree.shared.job.Job;
@@ -12,18 +13,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.Optional;
+
 import static io.vavr.API.Try;
 
-/**
- * Job responsável por avançar eventos pendentes do Outbox para o estado processado.
- *
- * <p>O fluxo atual ainda não despacha para handlers externos; ele aplica a
- * idempotência via {@link ProcessedEventGateway}, marca eventos como processados
- * em {@link OutboxEventGateway} e registra falhas para retry posterior.
- *
- * <p>Também expõe um scheduler Spring que executa o job periodicamente usando o
- * intervalo configurado em {@code outbox.polling.interval-ms}.
- */
 @Component
 public class ProcessDomainEventsJob implements Job<ProcessDomainEvents> {
     private static final Logger log = LoggerFactory.getLogger(ProcessDomainEventsJob.class);
@@ -31,17 +25,23 @@ public class ProcessDomainEventsJob implements Job<ProcessDomainEvents> {
     private final OutboxEventGateway outboxEventGateway;
     private final ProcessedEventGateway processedEventGateway;
     private final TransactionManager transactionManager;
+    private final List<OutboxEventHandler> handlers;
 
-    public ProcessDomainEventsJob(OutboxEventGateway outboxEventGateway, ProcessedEventGateway processedEventGateway, TransactionManager transactionManager) {
+    public ProcessDomainEventsJob(
+            final OutboxEventGateway outboxEventGateway,
+            final ProcessedEventGateway processedEventGateway,
+            final TransactionManager transactionManager,
+            final List<OutboxEventHandler> handlers
+    ) {
         this.outboxEventGateway = outboxEventGateway;
         this.processedEventGateway = processedEventGateway;
         this.transactionManager = transactionManager;
+        this.handlers = handlers;
     }
 
     @Override
-    public Either<Notification, JobResult> execute(ProcessDomainEvents input) {
+    public Either<Notification, JobResult> execute(final ProcessDomainEvents input) {
         return Try(() -> {
-
             final var pending = outboxEventGateway.findPending(input.batchSize());
 
             if (pending.isEmpty()) {
@@ -49,22 +49,29 @@ public class ProcessDomainEventsJob implements Job<ProcessDomainEvents> {
                 return JobResult.empty();
             }
 
-            int processed = 0, skipped = 0, failed = 0;
+            int processed = 0;
+            int skipped = 0;
+            int failed = 0;
 
             for (final var event : pending) {
                 try {
                     if (processedEventGateway.alreadyProcessed(event.id())) {
-                        // Idempotência: evento já processado anteriormente — apenas atualiza outbox
                         outboxEventGateway.markAsProcessed(event.id(), event.createdAt());
                         skipped++;
-                        log.debug("[ProcessDomainEvents] Evento {} já processado — ignorado.", event.id());
+                        log.debug("[ProcessDomainEvents] Evento {} ja processado, ignorado.", event.id());
                         continue;
                     }
 
-                    // Atomicamente: registra idempotência + marca outbox como processado
                     transactionManager.execute(() -> {
-                        processedEventGateway.recordProcessed(
-                                event.id(), event.eventType(), event.module());
+                        findHandler(event).ifPresentOrElse(
+                                handler -> handler.handle(event),
+                                () -> log.debug(
+                                        "[ProcessDomainEvents] Nenhum handler registrado para {}:{}.",
+                                        event.module(),
+                                        event.eventType()
+                                )
+                        );
+                        processedEventGateway.recordProcessed(event.id(), event.eventType(), event.module());
                         outboxEventGateway.markAsProcessed(event.id(), event.createdAt());
                         return (Void) null;
                     });
@@ -87,7 +94,7 @@ public class ProcessDomainEventsJob implements Job<ProcessDomainEvents> {
             }
 
             if (processed > 0 || failed > 0) {
-                log.info("[ProcessDomainEvents] Lote concluído — processados: {}, ignorados: {}, falhas: {}.",
+                log.info("[ProcessDomainEvents] Lote concluido - processados: {}, ignorados: {}, falhas: {}.",
                         processed, skipped, failed);
             }
 
@@ -98,6 +105,12 @@ public class ProcessDomainEventsJob implements Job<ProcessDomainEvents> {
                     throwable.getMessage(), throwable);
             return Notification.create(throwable);
         });
+    }
+
+    private Optional<OutboxEventHandler> findHandler(final OutboxEventGateway.PendingEvent event) {
+        return handlers.stream()
+                .filter(handler -> handler.supports(event.module(), event.eventType()))
+                .findFirst();
     }
 
     @Scheduled(fixedDelayString = "${outbox.polling.interval-ms:5000}")
